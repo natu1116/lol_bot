@@ -284,6 +284,76 @@ async def on_ready():
     check_special_roles.start()
     print(f"ログイン完了: {bot.user}")
 
+
+
+
+
+import asyncio
+from aiohttp import web
+from datetime import datetime, timedelta, timezone
+import aiohttp_cors
+
+PORT = int(os.getenv("PORT", 10000))  # Render が自動で割り当てる
+
+async def handle_ping(request):
+    JST = timezone(timedelta(hours=+9), 'JST')
+    current_time_jst = datetime.now(JST).strftime("%Y/%m/%d %H:%M:%S %Z")
+
+    print(f"🌐 [Web Ping] {current_time_jst} | Status: OK")
+    return web.Response(text="Bot is running and ready.")
+
+def setup_web_server():
+    app = web.Application()
+    app.router.add_get('/', handle_ping)
+
+    cors = aiohttp_cors.setup(app, defaults={
+        "*": aiohttp_cors.ResourceOptions(
+            allow_credentials=True,
+            allow_methods=["GET"],
+            allow_headers=("X-Requested-With", "Content-Type"),
+        )
+    })
+
+    for route in list(app.router.routes()):
+        cors.add(route)
+
+    return app
+
+async def start_web_server():
+    web_app = setup_web_server()
+    runner = web.AppRunner(web_app)
+    await runner.setup()
+
+    site = web.TCPSite(runner, host='0.0.0.0', port=PORT)
+    print(f"🌐 Webサーバー起動: ポート {PORT}")
+
+    try:
+        await site.start()
+    except Exception as e:
+        print(f"Webサーバー起動失敗: {e}")
+
+    await asyncio.Future()  # 永久待機
+
+async def main():
+    TOKEN = os.getenv("BOT_TOKEN")
+    if not TOKEN:
+        print("FATAL ERROR: BOT_TOKEN が設定されていません。")
+        return
+
+    web_task = asyncio.create_task(start_web_server())
+    bot_task = asyncio.create_task(bot.start(TOKEN))
+
+    await asyncio.gather(web_task, bot_task)
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("Bot and Web Server stopped.")
+    except Exception as e:
+        print(f"メイン実行中にエラー: {e}")
+
+
 # -----------------------------
 # 起動
 # -----------------------------
