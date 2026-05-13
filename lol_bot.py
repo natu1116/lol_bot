@@ -7,6 +7,7 @@ import asyncio
 from aiohttp import web
 from datetime import datetime, timedelta, timezone
 import aiohttp_cors
+from discord import app_commands
 
 # Google Drive API
 from google.oauth2 import service_account
@@ -313,10 +314,19 @@ async def point(interaction: discord.Interaction):
 # /give
 # -----------------------------
 @bot.tree.command(name="give", description="特定ユーザーにコインまたはポイントを付与する（管理者専用）")
+@app_commands.describe(
+    member="付与する相手",
+    item="coin または point",
+    amount="付与する数"
+)
+@app_commands.choices(item=[
+    app_commands.Choice(name="coin", value="coin"),
+    app_commands.Choice(name="point", value="point")
+])
 async def give(
     interaction: discord.Interaction,
     member: discord.Member,
-    item: str,
+    item: app_commands.Choice[str],
     amount: int
 ):
     # 管理者チェック
@@ -327,21 +337,11 @@ async def give(
         )
         return
 
-    # item の種類チェック
-    if item not in ["coin", "point"]:
-        await interaction.response.send_message(
-            "付与できる種類は `coin` または `point` です。",
-            ephemeral=True
-        )
-        return
-
-    # ユーザーデータ準備
     uid = str(member.id)
     ensure_user(uid)
     user = user_data[uid]
 
-    # 付与処理
-    if item == "coin":
+    if item.value == "coin":
         user["coins"] += amount
     else:
         user["points"] += amount
@@ -349,11 +349,9 @@ async def give(
     save_data(user_data)
 
     await interaction.response.send_message(
-        f"🎁 {member.mention} に **{amount} {item}** を付与しました！",
+        f"🎁 {member.mention} に **{amount} {item.value}** を付与しました！",
         ephemeral=True
     )
-
-
 # -----------------------------
 # 特殊ロール期限チェック
 # -----------------------------
