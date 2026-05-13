@@ -80,13 +80,21 @@ async def get_coin(interaction: discord.Interaction):
     ensure_user(uid)
     user = user_data[uid]
 
-    now = time.time()
-    if now - user["last_daily"] < 24 * 60 * 60:
-        await interaction.response.send_message("今日はすでに受け取っています。", ephemeral=True)
+    # JST 現在日付（例：20260513）
+    JST = timezone(timedelta(hours=+9), 'JST')
+    today = int(datetime.now(JST).strftime("%Y%m%d"))
+
+    # 初回 or 日付が変わっている → 受け取り可能
+    if user["last_daily"] == today:
+        await interaction.response.send_message(
+            "今日はすでに受け取っています。",
+            ephemeral=True
+        )
         return
 
+    # コイン付与
     user["coins"] += 1
-    user["last_daily"] = now
+    user["last_daily"] = today
     save_data(user_data)
 
     await interaction.response.send_message(
