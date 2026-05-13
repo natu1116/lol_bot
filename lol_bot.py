@@ -287,4 +287,6 @@ async def on_ready():
 # -----------------------------
 # 起動
 # -----------------------------
-bot.run("YOUR_TOKEN")
+import os
+TOKEN = os.getenv("BOT_TOKEN")
+bot.run(TOKEN)
