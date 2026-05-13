@@ -1,3 +1,4 @@
 discord.py
 aiohttp
 aiohttp_cors
+supabase
