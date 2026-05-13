@@ -72,9 +72,9 @@ def ensure_user(uid):
         save_data(user_data)
 
 # -----------------------------
-# /get（1日1回コイン）
+# /daily（1日1回コイン）
 # -----------------------------
-@bot.tree.command(name="get", description="1日1回コインを受け取る")
+@bot.tree.command(name="daily", description="1日1回コインを受け取る")
 async def get_coin(interaction: discord.Interaction):
     uid = str(interaction.user.id)
     ensure_user(uid)
