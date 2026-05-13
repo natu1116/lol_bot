@@ -1,4 +1,7 @@
 discord.py
 aiohttp
 aiohttp_cors
-supabase
+google-api-python-client
+google-auth
+google-auth-httplib2
+google-auth-oauthlib
