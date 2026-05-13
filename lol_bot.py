@@ -310,6 +310,51 @@ async def point(interaction: discord.Interaction):
     )
 
 # -----------------------------
+# /give
+# -----------------------------
+@bot.tree.command(name="give", description="特定ユーザーにコインまたはポイントを付与する（管理者専用）")
+async def give(
+    interaction: discord.Interaction,
+    member: discord.Member,
+    item: str,
+    amount: int
+):
+    # 管理者チェック
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message(
+            "このコマンドは管理者のみ使用できます。",
+            ephemeral=True
+        )
+        return
+
+    # item の種類チェック
+    if item not in ["coin", "point"]:
+        await interaction.response.send_message(
+            "付与できる種類は `coin` または `point` です。",
+            ephemeral=True
+        )
+        return
+
+    # ユーザーデータ準備
+    uid = str(member.id)
+    ensure_user(uid)
+    user = user_data[uid]
+
+    # 付与処理
+    if item == "coin":
+        user["coins"] += amount
+    else:
+        user["points"] += amount
+
+    save_data(user_data)
+
+    await interaction.response.send_message(
+        f"🎁 {member.mention} に **{amount} {item}** を付与しました！",
+        ephemeral=True
+    )
+
+
+# -----------------------------
 # 特殊ロール期限チェック
 # -----------------------------
 @tasks.loop(seconds=60)
