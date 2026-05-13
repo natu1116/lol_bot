@@ -77,28 +77,25 @@ def ensure_user(uid):
 # -----------------------------
 @bot.tree.command(name="daily", description="1日1回コインを受け取る")
 async def get_coin(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+
     uid = str(interaction.user.id)
     ensure_user(uid)
     user = user_data[uid]
 
-    # JST 現在日付（例：20260513）
     JST = timezone(timedelta(hours=+9), 'JST')
     today = int(datetime.now(JST).strftime("%Y%m%d"))
 
-    # 初回 or 日付が変わっている → 受け取り可能
     if user["last_daily"] == today:
-        await interaction.response.send_message(
-            "今日はすでに受け取っています。",
-            ephemeral=True
-        )
+        await interaction.followup.send("今日はすでに受け取っています。", ephemeral=True)
         return
 
-    # コイン付与
     user["coins"] += 1
     user["last_daily"] = today
+
     save_data(user_data)
 
-    await interaction.response.send_message(
+    await interaction.followup.send(
         f"🎁 今日のログインボーナス！\nコイン +1（現在: {user['coins']}）",
         ephemeral=True
     )
@@ -108,22 +105,25 @@ async def get_coin(interaction: discord.Interaction):
 # -----------------------------
 @bot.tree.command(name="gacha", description="5コインでガチャを回す")
 async def gacha(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+
     uid = str(interaction.user.id)
     ensure_user(uid)
     user = user_data[uid]
 
     if user["coins"] < 5:
-        await interaction.response.send_message("コインが足りません。（必要: 5）", ephemeral=True)
+        await interaction.followup.send("コインが足りません。（必要: 5）", ephemeral=True)
         return
 
     user["coins"] -= 5
     now = time.time()
     roll = random.random() * 100
 
+    # 神引き
     if roll < 4:
         role = discord.utils.get(interaction.guild.roles, name="神引き")
         if role is None:
-            await interaction.response.send_message("神引きロールが存在しません。", ephemeral=True)
+            await interaction.followup.send("神引きロールが存在しません。", ephemeral=True)
             return
 
         await interaction.user.add_roles(role)
@@ -135,9 +135,10 @@ async def gacha(interaction: discord.Interaction):
         }
 
         save_data(user_data)
-        await interaction.response.send_message("🌟 **神引き！特殊ロール獲得！**（72時間限定）", ephemeral=True)
+        await interaction.followup.send("🌟 **神引き！特殊ロール獲得！**（72時間限定）", ephemeral=True)
         return
 
+    # ポイント抽選
     elif roll < 11:
         pts = 15
     elif roll < 24:
@@ -150,7 +151,7 @@ async def gacha(interaction: discord.Interaction):
     user["points"] += pts
     save_data(user_data)
 
-    await interaction.response.send_message(
+    await interaction.followup.send(
         f"🎰 ガチャ結果！\n✨ **{pts}ポイント** を獲得！",
         ephemeral=True
     )
@@ -314,44 +315,33 @@ async def point(interaction: discord.Interaction):
 # /give
 # -----------------------------
 @bot.tree.command(name="give", description="特定ユーザーにコインまたはポイントを付与する（管理者専用）")
-@app_commands.describe(
-    member="付与する相手",
-    item="coin または point",
-    amount="付与する数"
-)
-@app_commands.choices(item=[
-    app_commands.Choice(name="coin", value="coin"),
-    app_commands.Choice(name="point", value="point")
-])
-async def give(
-    interaction: discord.Interaction,
-    member: discord.Member,
-    item: app_commands.Choice[str],
-    amount: int
-):
-    # 管理者チェック
+async def give(interaction: discord.Interaction, member: discord.Member, item: str, amount: int):
+    await interaction.response.defer(ephemeral=True)
+
     if not interaction.user.guild_permissions.administrator:
-        await interaction.response.send_message(
-            "このコマンドは管理者のみ使用できます。",
-            ephemeral=True
-        )
+        await interaction.followup.send("このコマンドは管理者のみ使用できます。", ephemeral=True)
+        return
+
+    if item not in ["coin", "point"]:
+        await interaction.followup.send("付与できる種類は `coin` または `point` です。", ephemeral=True)
         return
 
     uid = str(member.id)
     ensure_user(uid)
     user = user_data[uid]
 
-    if item.value == "coin":
+    if item == "coin":
         user["coins"] += amount
     else:
         user["points"] += amount
 
     save_data(user_data)
 
-    await interaction.response.send_message(
-        f"🎁 {member.mention} に **{amount} {item.value}** を付与しました！",
+    await interaction.followup.send(
+        f"🎁 {member.mention} に **{amount} {item}** を付与しました！",
         ephemeral=True
     )
+
 # -----------------------------
 # 特殊ロール期限チェック
 # -----------------------------
